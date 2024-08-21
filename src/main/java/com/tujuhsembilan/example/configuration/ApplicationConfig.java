@@ -74,6 +74,7 @@ public class ApplicationConfig {
         .authorizeHttpRequests(req -> req
             .requestMatchers(AntPathRequestMatcher.antMatcher("/auth/jwks.json")).permitAll()
             .requestMatchers(AntPathRequestMatcher.antMatcher("/auth/login")).permitAll()
+            .requestMatchers(AntPathRequestMatcher.antMatcher("/auth/refresh-token")).permitAll()
             .requestMatchers(AntPathRequestMatcher.antMatcher("/admin/**")).hasAuthority("ADMIN") // API dengan pattern /admin/** hanya bisa diakses oleh role "ADMIN" 
             .anyRequest().authenticated())
         // Authorization (DEFAULT IN MEM)

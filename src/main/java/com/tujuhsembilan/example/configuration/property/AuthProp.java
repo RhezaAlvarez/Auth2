@@ -23,4 +23,6 @@ public class AuthProp {
   private String systemUsername;
   private String systemPassword;
 
+  private final Integer ACCESS_TOKEN_DURATION_NOT_REMEMBER_ME = 60; // 1 jam
+  private final Integer ACCESS_TOKEN_DURATION_REMEMBER_ME = 120; // 24 jam
 }
