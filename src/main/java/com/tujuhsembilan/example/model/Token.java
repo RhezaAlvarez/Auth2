@@ -10,7 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BlackListToken {
+public class Token {
     @Id
     private String token;
+
+    private String username;
+
+    private Boolean isActive;
 }

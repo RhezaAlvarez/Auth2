@@ -32,8 +32,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.ECKey;
 import com.tujuhsembilan.example.configuration.property.AuthProp;
-import com.tujuhsembilan.example.model.BlackListToken;
-import com.tujuhsembilan.example.repository.BlackListTokenRepo;
+import com.tujuhsembilan.example.model.Token;
+import com.tujuhsembilan.example.repository.TokenRepo;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +53,7 @@ public class BasicLoginController {
   private final ECKey ecJwk;
 
   @Autowired
-  private BlackListTokenRepo blackListTokenRepo;
+  private TokenRepo tokenRepo;
 
   @GetMapping("/jwks.json")
   public ResponseEntity<?> jwk() throws JsonProcessingException {
@@ -63,7 +63,7 @@ public class BasicLoginController {
   // You MUST login using BASIC AUTH, NOT POST BODY
   @PostMapping("/login")
   public ResponseEntity<?> login(@NotNull Authentication auth, @RequestParam(name = "rememberMe", defaultValue = "false") boolean rememberMe) {
-    List<BlackListToken> tokens = blackListTokenRepo.findAll();
+    List<Token> tokens = tokenRepo.findAll();
     Instant now = Instant.now();
 
     Integer accessTokenExpiredDuration = rememberMe ? authProp.getACCESS_TOKEN_DURATION_REMEMBER_ME() : authProp.getACCESS_TOKEN_DURATION_NOT_REMEMBER_ME();
@@ -79,6 +79,9 @@ public class BasicLoginController {
             .expiresAt(accessTokenExpiredTime)
             .build()));
 
+    Token accessTokenTemp = new Token(accessToken.getTokenValue(), auth.getName(), true);
+    tokenRepo.save(accessTokenTemp);
+
     Integer refreshTokenExpiredDuration = accessTokenExpiredDuration * 2;
     Instant refreshTokenExpiredTime = now.plus(refreshTokenExpiredDuration , ChronoUnit.SECONDS);
     
@@ -91,6 +94,15 @@ public class BasicLoginController {
                 // You SHOULD set expiration, claims, etc here too
                 .expiresAt(refreshTokenExpiredTime)
                 .build()));
+    
+    Token refreshTokenTemp = new Token(accessToken.getTokenValue(), auth.getName(), true);
+    tokenRepo.save(refreshTokenTemp);
+
+    tokens.stream().forEach(token -> {
+      if(token.getUsername().equals(auth.getName()) && token.getIsActive() == true){
+        token.setIsActive(false);
+      }
+    });
 
     return ResponseEntity.ok(Map.of(
       "accessToken", accessToken.getTokenValue(),
@@ -130,14 +142,14 @@ public class BasicLoginController {
   @PostMapping("/logout")
   public ResponseEntity<?> logout(Authentication authentication) {
     if (authentication instanceof JwtAuthenticationToken) {
-      JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
-      Jwt jwt = jwtAuthenticationToken.getToken();
-      String tokenValue = jwt.getTokenValue();
+      String username = authentication.getName();
 
-      BlackListToken blacklistToken = new BlackListToken();
-      blacklistToken.setToken(tokenValue);
-
-      blackListTokenRepo.save(blacklistToken);
+      List<Token> listToken = tokenRepo.findAll();
+      listToken.stream().forEach(token ->{
+        if(token.getUsername().equals(username)){
+          token.setIsActive(false);
+        }
+      });
     }
     return ResponseEntity.ok().build();
   }
